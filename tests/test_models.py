@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from inflammation.models import daily_mean, daily_max, daily_min
+from inflammation.models import daily_mean, daily_max, daily_min, patient_normalise
 
 
 @pytest.mark.parametrize(
@@ -50,3 +50,56 @@ def test_daily_min_string():
 
     with pytest.raises(TypeError):
         daily_min([["Hello", "there"], ["General", "Kenobi"]])
+
+
+@pytest.mark.parametrize(
+    "test, expected, expect_raises",
+    [
+        (
+            [
+                [float("nan"), float("nan"), float("nan")],
+                [float("nan"), float("nan"), float("nan")],
+                [float("nan"), float("nan"), float("nan")],
+            ],
+            [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+            None,
+        ),
+        ([[0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0]], None),
+        ([[1, 1, 1], [1, 1, 1], [1, 1, 1]], [[1, 1, 1], [1, 1, 1], [1, 1, 1]], None),
+        (
+            [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+            [[0.33, 0.67, 1], [0.67, 0.83, 1], [0.78, 0.89, 1]],
+            None,
+        ),
+        (
+            [[-1, 2, 3], [4, 5, 6], [7, 8, 9]],
+            None,
+            ValueError,
+        ),
+        (
+            'hello',
+            None,
+            TypeError,
+        ),
+        (
+            3,
+            None,
+            TypeError,
+        ),
+        (
+            [3, 2, 1],
+            None,
+            ValueError,
+        )
+    ],
+)
+def test_patient_normalise(test, expected, expect_raises):
+    """Test normalisation works for arrays of one and positive integers."""
+    if isinstance(test, list):
+        test = np.array(test)
+    if expect_raises is not None:
+        with pytest.raises(expect_raises):
+            patient_normalise(test)
+    else:
+        result = patient_normalise(test)
+        npt.assert_allclose(result, np.array(expected), rtol=1e-2, atol=1e-2)
